@@ -6,17 +6,14 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.PolygonSpriteBatch;
-import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
-import com.badlogic.gdx.math.Vector;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.FloatArray;
 import space.earlygrey.shapedrawer.*;
 
 
 import java.util.ArrayList;
-import java.util.stream.Collectors;
 
 /** {@link com.badlogic.gdx.ApplicationListener} implementation shared by all platforms. */
 public class GdxTest extends ApplicationAdapter {
@@ -72,7 +69,7 @@ public class GdxTest extends ApplicationAdapter {
 
 		var region = new TextureRegion(image);
 		region.flip(false, true);
-		var calcPath = path(FloatArray.with(path), wall, JoinType.Smooth);
+		var calcPath = closedPath(FloatArray.with(path), wall, JoinType.Smooth);
 
 //		drawer.startRecording();
 //		drawer.path(path, wall, space.earlygrey.shapedrawer.JoinType.POINTY, false);
@@ -123,7 +120,7 @@ public class GdxTest extends ApplicationAdapter {
 	private Vector2 vert2 = new Vector2();
 	private Vector2 vert3 = new Vector2();
 	private Vector2	vert4 = new Vector2();
-	float[] path(FloatArray path, float lineWidth, JoinType joinType) {
+	float[] closedPath(FloatArray path, float lineWidth, JoinType joinType) {
 		var outer = new ArrayList<Float>();
 		var inner = new ArrayList<Float>();
 
