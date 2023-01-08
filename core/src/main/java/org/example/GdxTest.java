@@ -58,7 +58,7 @@ public class GdxTest extends ApplicationAdapter {
 
 		var region = new TextureRegion(image);
 		region.flip(false, true);
-		var calcPath = path(FloatArray.with(path), wall, JoinType.Smooth, false);
+		var calcPath = path(FloatArray.with(path), wall, JoinType.Pointy, false);
 
 		sprite.setVertices(calcPath);
 		//sprite.setTextureRegion(region);
@@ -135,21 +135,28 @@ public class GdxTest extends ApplicationAdapter {
 				}
 			}
 			if (joinType == JoinType.Pointy) {
-				Joiner.preparePointyJoin(A, B, C, D, E, halfWidth);
-			} else {
-				Joiner.prepareSmoothJoin(A, B, C, D, E, halfWidth, false);
-			}
-			outer.add(D.x);
-			outer.add(D.y);
-			inner.add(E.x);
-			inner.add(E.y);
-
-			if (joinType == JoinType.Smooth) {
-				Joiner.prepareSmoothJoin(A, B, C, D, E, halfWidth, true);
+				var angle = Joiner.preparePointyJoin(A, B, C, D, E, halfWidth);
 				outer.add(D.x);
 				outer.add(D.y);
 				inner.add(E.x);
 				inner.add(E.y);
+			} else {
+				Joiner.prepareSmoothJoin(A, B, C, D, E, halfWidth, false);
+				outer.add(D.x);
+				outer.add(D.y);
+				inner.add(E.x);
+				inner.add(E.y);
+			}
+
+			if (joinType == JoinType.Smooth) {
+				var bendsLeft = Joiner.prepareSmoothJoin(A, B, C, D, E, halfWidth, true);
+				if(bendsLeft) {
+					inner.add(E.x);
+					inner.add(E.y);
+				} else {
+					outer.add(D.x);
+					outer.add(D.y);
+				}
 			}
 		}
 		if (open) {
@@ -188,13 +195,17 @@ public class GdxTest extends ApplicationAdapter {
 				inner.add(E.y);
 
 				//draw connection back to first vertex
-				Joiner.prepareSmoothJoin(A, B, C, D, E, halfWidth, true);
-				outer.add(D.x);
-				outer.add(D.y);
-				inner.add(E.x);
-				inner.add(E.y);
+				var bendsLeft =  Joiner.prepareSmoothJoin(A, B, C, D, E, halfWidth, true);
+				if(bendsLeft) {
+					inner.add(E.x);
+					inner.add(E.y);
+				} else {
+					outer.add(D.x);
+					outer.add(D.y);
+				}
+
 				A.set(path.get(2), path.get(3));
-				Joiner.prepareSmoothJoin(B, C, A, D, E, halfWidth, false);
+				bendsLeft =  Joiner.prepareSmoothJoin(B, C, A, D, E, halfWidth, false);
 				outer.add(D.x);
 				outer.add(D.y);
 				inner.add(E.x);
