@@ -48,38 +48,21 @@ public class GdxTest extends ApplicationAdapter {
 		float wall = 100;
 
 		var path = new float[] {
-				x+wall/2,y+wall/2,
-				x+wall/2,y+h-wall/2,
-				x+w-wall/2,y+h-wall/2,
-				x+w-wall/2,y+wall/2,
+				150,150,
+				150,550,
+				350,450,
+				550,550,
+				700,150,
 		};
 
-		float[] vertices = new float[] {
-				x,y,
-				x,y + h,
-				x+w,y+h,
-				x+w,y,
-				x,y,
-				x+wall,y+wall,
-				x+w-wall,y+wall,
-				x+w-wall,y+h-wall,
-				x+wall,y+h-wall,
-				x+wall,y+wall
-		};
 
 		var region = new TextureRegion(image);
 		region.flip(false, true);
-		var calcPath = closedPath(FloatArray.with(path), wall, JoinType.Smooth);
-
-//		drawer.startRecording();
-//		drawer.path(path, wall, space.earlygrey.shapedrawer.JoinType.POINTY, false);
-//		var drawing = drawer.stopRecording();
-//		var coordinates = new FloatArray();
-//		drawing.getTransformedXYCoordinates(coordinates);
+		var calcPath = path(FloatArray.with(path), wall, JoinType.Smooth, false);
 
 		sprite.setVertices(calcPath);
 		//sprite.setTextureRegion(region);
-		sprite.draw(batch);
+		//sprite.draw(batch);
 		//batch.draw(image, 140, 210);
 
 		batch.end();
@@ -116,11 +99,8 @@ public class GdxTest extends ApplicationAdapter {
 	private Vector2 E0 = new Vector2();
 	private Vector2 D0 = new Vector2();
 	private Vector2 vec1 = new Vector2();
-	private Vector2 vert1 = new Vector2();
-	private Vector2 vert2 = new Vector2();
-	private Vector2 vert3 = new Vector2();
-	private Vector2	vert4 = new Vector2();
-	float[] closedPath(FloatArray path, float lineWidth, JoinType joinType) {
+
+	float[] path(FloatArray path, float lineWidth, JoinType joinType, boolean open) {
 		var outer = new ArrayList<Float>();
 		var inner = new ArrayList<Float>();
 
@@ -130,116 +110,99 @@ public class GdxTest extends ApplicationAdapter {
 			B.set(path.get(i), path.get(i+1));
 			C.set(path.get(i+2), path.get(i+3));
 			if (i == 2) {
-					vec1.set(path.get(path.size  -2), path.get(path.size - 1));
+				if(open) {
+					Joiner.prepareSquareEndpoint(path.get(2), path.get(3), path.get(0), path.get(1), D, E, halfWidth);
+					outer.add(D.x);
+					outer.add(D.y);
+
+					// add link at start
+					inner.add(D.x);
+					inner.add(D.y);
+
+					inner.add(E.x);
+					inner.add(E.y);
+				} else {
+					vec1.set(path.get(path.size - 2), path.get(path.size - 1));
 					if (joinType == JoinType.Pointy) {
 						Joiner.preparePointyJoin(vec1, A, B, D0, E0, halfWidth);
 					} else {
 						Joiner.prepareSmoothJoin(vec1, A, B, D0, E0, halfWidth, true);
 					}
-					vert1.set(E0);
-					vert2.set(D0);
+					outer.add(D0.x);
+					outer.add(D0.y);
+					inner.add(E0.x);
+					inner.add(E0.y);
+				}
 			}
 			if (joinType == JoinType.Pointy) {
 				Joiner.preparePointyJoin(A, B, C, D, E, halfWidth);
 			} else {
 				Joiner.prepareSmoothJoin(A, B, C, D, E, halfWidth, false);
 			}
-			vert3.set(D);
-			vert4.set(E);
+			outer.add(D.x);
+			outer.add(D.y);
+			inner.add(E.x);
+			inner.add(E.y);
 
-			float x3, y3, x4, y4;
-			if (joinType == JoinType.Pointy) {
-				x3 = vert3.x;
-				y3 = vert3.y;
-				x4 = vert4.x;
-				y4 = vert4.y;
-			} else {
+			if (joinType == JoinType.Smooth) {
 				Joiner.prepareSmoothJoin(A, B, C, D, E, halfWidth, true);
-				x3 = D.x;
-				y3 = D.y;
-				x4 = E.x;
-				y4 = E.y;
+				outer.add(D.x);
+				outer.add(D.y);
+				inner.add(E.x);
+				inner.add(E.y);
 			}
-			inner.add(vert1.x);
-    		inner.add(vert1.y);
-			outer.add(vert2.x);
-			outer.add(vert2.y);
-			outer.add(vert3.x);
-			outer.add(vert3.y);
-			inner.add(vert4.x);
-			inner.add(vert4.y);
-			vert1.x = x4;
-			vert1.y = y4;
-			vert2.x = x3;
-			vert2.y = y3;
 		}
-
-		if (joinType == JoinType.Pointy) {
+		if (open) {
 			//draw last link on path
-			A.set(path.get(0), path.get(1));
-			Joiner.preparePointyJoin(B, C, A, D, E, halfWidth);
-			vert3.set(D);
-			vert4.set(E);
-			inner.add(vert1.x);
-			inner.add(vert1.y);
-			outer.add(vert2.x);
-			outer.add(vert2.y);
-			outer.add(vert3.x);
-			outer.add(vert3.y);
-			inner.add(vert4.x);
-			inner.add(vert4.y);
+			Joiner.prepareSquareEndpoint(B, C, D, E, halfWidth);
+			outer.add(E.x);
+			outer.add(E.y);
 
-			//draw connection back to first vertex
-			vert1.set(D);
-			vert2.set(E);
-			vert3.set(E0);
-			vert4.set(D0);
-
-			outer.add(vert1.x);
-			outer.add(vert1.y);
-			inner.add(vert2.x);
-			inner.add(vert2.y);
-			inner.add(vert3.x);
-			inner.add(vert3.y);
-			outer.add(vert4.x);
-			outer.add(vert4.y);
-
+			inner.add(D.x);
+			inner.add(D.y);
 		} else {
-			//draw last link on path
-			A.set(B);
-			B.set(C);
-			C.set(path.get(0), path.get(1));
-			Joiner.prepareSmoothJoin(A, B, C, D, E, halfWidth, false);
-			vert3.set(D);
-			vert4.set(E);
-			inner.add(vert1.x);
-			inner.add(vert1.y);
-			outer.add(vert2.x);
-			outer.add(vert2.y);
-			outer.add(vert3.x);
-			outer.add(vert3.y);
-			inner.add(vert4.x);
-			inner.add(vert4.y);
+			if (joinType == JoinType.Pointy) {
+				//draw last link on path
+				A.set(path.get(0), path.get(1));
+				Joiner.preparePointyJoin(B, C, A, D, E, halfWidth);
+				outer.add(D.x);
+				outer.add(D.y);
+				inner.add(E.x);
+				inner.add(E.y);
 
-			//draw connection back to first vertex
-			Joiner.prepareSmoothJoin(A, B, C, D, E, halfWidth, true);
-			vert3.set(E);
-			vert4.set(D);
-			A.set(path.get(2), path.get(3));
-			Joiner.prepareSmoothJoin(B, C, A, D, E, halfWidth, false);
-			vert1.set(D);
-			vert2.set(E);
+				//draw connection back to first vertex
+				outer.add(D0.x);
+				outer.add(D0.y);
+				inner.add(E0.x);
+				inner.add(E0.y);
 
-			inner.add(vert3.x);
-			inner.add(vert3.y);
-			outer.add(vert4.x);
-			outer.add(vert4.y);
-			outer.add(vert1.x);
-			outer.add(vert1.y);
-			inner.add(vert2.x);
-			inner.add(vert2.y);
-			outer.add(D0.x);
-			outer.add(D0.y);
+			} else {
+				//draw last link on path
+				A.set(B);
+				B.set(C);
+				C.set(path.get(0), path.get(1));
+				Joiner.prepareSmoothJoin(A, B, C, D, E, halfWidth, false);
+				outer.add(D.x);
+				outer.add(D.y);
+				inner.add(E.x);
+				inner.add(E.y);
+
+				//draw connection back to first vertex
+				Joiner.prepareSmoothJoin(A, B, C, D, E, halfWidth, true);
+				outer.add(D.x);
+				outer.add(D.y);
+				inner.add(E.x);
+				inner.add(E.y);
+				A.set(path.get(2), path.get(3));
+				Joiner.prepareSmoothJoin(B, C, A, D, E, halfWidth, false);
+				outer.add(D.x);
+				outer.add(D.y);
+				inner.add(E.x);
+				inner.add(E.y);
+
+				outer.add(D0.x);
+				outer.add(D0.y);
+			}
 		}
 
 		float[] floatArray = new float[outer.size()+ inner.size()];
@@ -254,7 +217,6 @@ public class GdxTest extends ApplicationAdapter {
 		}
 		return floatArray;
 	}
-
 
 
 	@Override
