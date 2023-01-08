@@ -68,6 +68,17 @@ public class Joiner {
         E.set(AB.y, -AB.x).add(B);
     }
 
+    static Vector2 prepareFlatEndpoint(float pathPointX, float pathPointY, float endPointX, float endPointY, Vector2 D, Vector2 E, float halfLineWidth) {
+        v.set(endPointX, endPointY).sub(pathPointX, pathPointY).setLength(halfLineWidth);
+        D.set(v.y, -v.x).add(endPointX, endPointY);
+        E.set(-v.y, v.x).add(endPointX, endPointY);
+        return v;
+    }
+
+    static void prepareFlatEndpoint(Vector2 pathPoint, Vector2 endPoint, Vector2 D, Vector2 E, float halfLineWidth) {
+        prepareFlatEndpoint(pathPoint.x, pathPoint.y, endPoint.x, endPoint.y, D, E, halfLineWidth);
+    }
+
     static void prepareSquareEndpoint(float pathPointX, float pathPointY, float endPointX, float endPointY, Vector2 D, Vector2 E, float halfLineWidth) {
         v.set(endPointX, endPointY).sub(pathPointX, pathPointY).setLength(halfLineWidth);
         D.set(v.y, -v.x).add(endPointX, endPointY).add(v);

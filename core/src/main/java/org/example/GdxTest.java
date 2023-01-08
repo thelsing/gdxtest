@@ -8,15 +8,19 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.PolygonSpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import com.badlogic.gdx.math.Bezier;
+import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.FloatArray;
 import space.earlygrey.shapedrawer.*;
 
 
 import java.util.ArrayList;
+import java.util.List;
 
 /** {@link com.badlogic.gdx.ApplicationListener} implementation shared by all platforms. */
 public class GdxTest extends ApplicationAdapter {
+	private static final float POINTS_PER_BEZIER = 10;
 	private PolygonSpriteBatch batch;
 	private Texture image;
 	private RepeatablePolygonSprite sprite;
@@ -41,10 +45,6 @@ public class GdxTest extends ApplicationAdapter {
 		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 		batch.begin();
 
-		float x = 100;
-		float y = 100;
-		float h = 500;
-		float w = 600;
 		float wall = 100;
 
 		var path = new float[] {
@@ -58,21 +58,21 @@ public class GdxTest extends ApplicationAdapter {
 
 		var region = new TextureRegion(image);
 		region.flip(false, true);
-		var calcPath = path(FloatArray.with(path), wall, JoinType.Pointy, false);
 
-		sprite.setVertices(calcPath);
+
+		//sprite.setVertices(calcPath);
 		//sprite.setTextureRegion(region);
 		//sprite.draw(batch);
 		//batch.draw(image, 140, 210);
 
 		batch.end();
 		shapeRenderer.begin();
+		shapeRenderer.setColor(Color.YELLOW);
+		var calcPath = path(FloatArray.with(path), wall, JoinType.Round, true);
 		//sprite.drawDebug(shapeRenderer, Color.CORAL);
 		shapeRenderer.setColor(Color.RED);
 		for(var i = 1; i<path.length; i+=2)
-			shapeRenderer.circle(path[i-1], path[i], 5);
-
-
+			pointAt(path[i-1], path[i]);
 
 		shapeRenderer.polyline(path);
 		//shapeRenderer.setColor(Color.BLUE);
@@ -82,6 +82,10 @@ public class GdxTest extends ApplicationAdapter {
 		shapeRenderer.end();
 
 
+	}
+
+	void pointAt(float x, float y) {
+		shapeRenderer.circle(x, y, 5);
 	}
 
 	enum JoinType {
@@ -98,6 +102,8 @@ public class GdxTest extends ApplicationAdapter {
 	private Vector2 E = new Vector2();
 	private Vector2 E0 = new Vector2();
 	private Vector2 D0 = new Vector2();
+	private Vector2 AB = new Vector2();
+	private Vector2 BC = new Vector2();
 	private Vector2 vec1 = new Vector2();
 
 	float[] path(FloatArray path, float lineWidth, JoinType joinType, boolean open) {
@@ -111,16 +117,26 @@ public class GdxTest extends ApplicationAdapter {
 			C.set(path.get(i+2), path.get(i+3));
 			if (i == 2) {
 				if(open) {
-					Joiner.prepareSquareEndpoint(path.get(2), path.get(3), path.get(0), path.get(1), D, E, halfWidth);
-					outer.add(D.x);
-					outer.add(D.y);
+					if(joinType == JoinType.Round) {
+						Joiner.prepareFlatEndpoint(B, A, D, E, halfWidth);
+						outer.add(D.x);
+						outer.add(D.y);
+						vec1.set(D).add(-A.x, - A.y);
+						addArc(inner, A.x, A.y, halfWidth, vec1.angleRad(), MathUtils.PI, false, 0);
+						inner.add(E.x);
+						inner.add(E.y);
+					} else {
+						Joiner.prepareSquareEndpoint(B, A, D, E, halfWidth);
+						outer.add(D.x);
+						outer.add(D.y);
 
-					// add link at start
-					inner.add(D.x);
-					inner.add(D.y);
+						// add link at start
+						inner.add(D.x);
+						inner.add(D.y);
 
-					inner.add(E.x);
-					inner.add(E.y);
+						inner.add(E.x);
+						inner.add(E.y);
+					}
 				} else {
 					vec1.set(path.get(path.size - 2), path.get(path.size - 1));
 					if (joinType == JoinType.Pointy) {
@@ -135,38 +151,58 @@ public class GdxTest extends ApplicationAdapter {
 				}
 			}
 			if (joinType == JoinType.Pointy) {
-				var angle = Joiner.preparePointyJoin(A, B, C, D, E, halfWidth);
+				Joiner.preparePointyJoin(A, B, C, D, E, halfWidth);
 				outer.add(D.x);
 				outer.add(D.y);
 				inner.add(E.x);
 				inner.add(E.y);
 			} else {
-				Joiner.prepareSmoothJoin(A, B, C, D, E, halfWidth, false);
+				var bendsLeft = Joiner.prepareSmoothJoin(A, B, C, D, E, halfWidth, false);
+				if(bendsLeft) {
+					vec1.set(E);
+				} else {
+					vec1.set(D);
+				}
 				outer.add(D.x);
 				outer.add(D.y);
 				inner.add(E.x);
 				inner.add(E.y);
-			}
+				//shapeRenderer.circle(B.x, B.y, halfWidth);
 
-			if (joinType == JoinType.Smooth) {
-				var bendsLeft = Joiner.prepareSmoothJoin(A, B, C, D, E, halfWidth, true);
+				Joiner.prepareSmoothJoin(A, B, C, D, E, halfWidth, true);
 				if(bendsLeft) {
 					inner.add(E.x);
 					inner.add(E.y);
 				} else {
+//					if(joinType == JoinType.Round) {
+//						AB.set(B).sub(A);
+//						BC.set(C).sub(B);
+//						vec1.add(-B.x, - B.y);
+//						var angle = ShapeUtils.angleRad(AB, BC);
+//						addArc(outer, B.x, B.y, halfWidth, vec1.angleRad(), angle, true, 0);
+//					}
 					outer.add(D.x);
 					outer.add(D.y);
 				}
 			}
 		}
 		if (open) {
-			//draw last link on path
-			Joiner.prepareSquareEndpoint(B, C, D, E, halfWidth);
-			outer.add(E.x);
-			outer.add(E.y);
+			if(joinType == JoinType.Round) {
+				Joiner.prepareFlatEndpoint(B, C, D, E, halfWidth);
+				outer.add(E.x);
+				outer.add(E.y);
+				inner.add(D.x);
+				inner.add(D.y);
+				vec1.set(D).add(-C.x, - C.y);
+				addArc(inner, C.x, C.y, halfWidth, vec1.angleRad(), MathUtils.PI, false, 0);
+			} else {
+				Joiner.prepareSquareEndpoint(B, C, D, E, halfWidth);
+				outer.add(E.x);
+				outer.add(E.y);
 
-			inner.add(D.x);
-			inner.add(D.y);
+				inner.add(D.x);
+				inner.add(D.y);
+			}
 		} else {
 			if (joinType == JoinType.Pointy) {
 				//draw last link on path
@@ -227,6 +263,60 @@ public class GdxTest extends ApplicationAdapter {
 			floatArray[floatArray.length - j - 1] =  inner.get(j - 1);
 		}
 		return floatArray;
+	}
+
+	private Vector2 A1 = new Vector2();
+	private Vector2 B1 = new Vector2();
+	private Vector2 dir = new Vector2();
+
+	private void addArc(List<Float> list, float centreX, float centreY, float radius, float startAngle, float radians, boolean clockwise, float rotation){
+		var sides = estimateSidesRequired(radius, radius);
+		float angleInterval = MathUtils.PI2 / sides;
+		float endAngle = startAngle + radians;
+		if(clockwise) {
+			angleInterval *= -1;
+		}
+
+
+		float cos = (float) Math.cos(angleInterval), sin = (float) Math.sin(angleInterval);
+		float cosRot = (float) Math.cos(rotation), sinRot = (float) Math.sin(rotation);
+
+		int start = (int) Math.ceil(sides * (startAngle / ShapeUtils.PI2));
+		int end = (int) Math.floor(sides * (endAngle / ShapeUtils.PI2)) + 1;
+
+		dir.set(1, 0).rotateRad(Math.min(start * angleInterval, endAngle));
+		A1.set(1, 0).rotateRad(clockwise ? endAngle : startAngle).scl(radius);
+		B1.set(dir).scl(radius);
+		boolean draw = true;
+		shapeRenderer.setColor(Color.YELLOW);
+		for (int i = start; i <= end; i++) {
+			float x1 = A1.x*cosRot-A1.y*sinRot  + centreX, y1 = A1.x*sinRot+A1.y*cosRot + centreY;
+//			float x2 = B1.x*cosRot-B1.y*sinRot  + centreX, y2 = B1.x*sinRot+B1.y*cosRot + centreY;
+			list.add(x1);
+			list.add(y1);
+			if(draw) {
+				pointAt(x1, y1);
+				draw = false;
+			}
+//			list.add(x2);
+//			list.add(y2);
+			if (i<end-1) {
+				A1.set(B1);
+				dir.set(dir.x * cos - dir.y * sin, dir.x * sin + dir.y * cos);
+				B1.set(dir).scl(radius);
+			} else if (i==end-1) {
+				A1.set(B1);
+				B1.set(1, 0).rotateRad(endAngle).scl(radius);
+				draw = true;
+				shapeRenderer.setColor(Color.CYAN);
+			}
+		}
+	}
+
+
+	private SideEstimator sideEstimator = new DefaultSideEstimator();
+	protected int estimateSidesRequired(float radiusX, float radiusY) {
+		return sideEstimator.estimateSidesRequired(drawer.getPixelSize(), radiusX, radiusY);
 	}
 
 
