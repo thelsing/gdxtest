@@ -2,8 +2,10 @@ package org.example;
 
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
+import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.PolygonSpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
@@ -11,6 +13,7 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Bezier;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.FloatArray;
 import space.earlygrey.shapedrawer.*;
@@ -30,6 +33,8 @@ public class GdxTest extends ApplicationAdapter {
 
 	private ShapeDrawer drawer;
 
+	private OrthographicCamera cam;
+
 	@Override
 	public void create() {
 		batch = new PolygonSpriteBatch();
@@ -38,70 +43,115 @@ public class GdxTest extends ApplicationAdapter {
 		shapeRenderer = new ShapeRenderer();
 		shapeRenderer.setAutoShapeType(true);
 		drawer = new ShapeDrawer(batch);
+
+		float w = Gdx.graphics.getWidth();
+		float h = Gdx.graphics.getHeight();
+
+		// Constructs a new OrthographicCamera, using the given viewport width and height
+		// Height is multiplied by aspect ratio.
+		cam = new OrthographicCamera(w, h);
+
+		cam.position.set(cam.viewportWidth / 2f, cam.viewportHeight / 2f, 0);
+		cam.update();
 	}
+
+	private FloatArray _path = new FloatArray();
+	private JoinType _type = JoinType.Pointy;
+
+	private boolean _open = true;
+
+	private float[] _calcPath;
 
 	@Override
 	public void render() {
+		handleInput();
 		Gdx.gl.glClearColor(0.15f, 0.15f, 0.2f, 1f);
 		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+
+		cam.update();
+		batch.setProjectionMatrix(cam.combined);
+		shapeRenderer.setProjectionMatrix(cam.combined);
 		batch.begin();
 
 		float wall = 100;
 
-		var path = new float[] {
-				150,150,
-				150,550,
-				350,450,
-				550,550,
-				700,150,
-		};
+//		var path = new float[] {
+//				150,150,
+//				150,550,
+//				350,450,
+//				550,550,
+//				700,150,
+//		};
 
 
 		var region = new TextureRegion(image);
 		region.flip(false, true);
 
-
-		//sprite.setVertices(calcPath);
-		//sprite.setTextureRegion(region);
-		//sprite.draw(batch);
-		//batch.draw(image, 140, 210);
-
+		if(_path.size >= 6) {
+			_calcPath = path(_path, wall, _type, _open);
+			sprite.setVertices(_calcPath);
+			//sprite.setTextureRegion(region);
+			sprite.draw(batch);
+			//batch.draw(image, 140, 210);
+		}
 		batch.end();
 		shapeRenderer.begin();
-		shapeRenderer.setColor(Color.YELLOW);
 
-//		var v1 = new Vector2();
-//		v1.set(-1.0f, -1.0f);
-//		var angle = v1.angleRad();
-//
-//		var v2 = new Vector2();
-//		v2.set(0f, -1.0f);
-//		angle = v2.angleRad();
-//
-//		var arc = new ArrayList<Float>();
-//		addArc(arc, 200, 200, 100, v1.angleRad(), v2.angleRad(), false);
-//		var calcPath = new float[arc.size()];
-//		var i = 0;
-//		for(var f : arc)
-//			calcPath[i++] = f;
-
-
-
-
-		var calcPath = path(FloatArray.with(path), wall, JoinType.Round, true);
+		//
 		//sprite.drawDebug(shapeRenderer, Color.CORAL);
 		shapeRenderer.setColor(Color.RED);
-		for(var i = 1; i<path.length; i+=2)
-			pointAt(path[i-1], path[i]);
+		for(var i = 1; i<_path.size; i+=2)
+			pointAt(_path.get(i-1), _path.get(i));
 
-//		shapeRenderer.polyline(path);
+		if(_path.size >= 6) {
+			//var calcPath = path(_path, wall, _type, _open);
+			shapeRenderer.polyline(_path.toArray());
+			shapeRenderer.setColor(Color.GREEN);
+			shapeRenderer.polyline(_calcPath);
+			sprite.drawDebug(shapeRenderer, Color.CORAL);
+		}
 		//shapeRenderer.setColor(Color.BLUE);
 		//shapeRenderer.polyline(vertices);
-		shapeRenderer.setColor(Color.GREEN);
-		shapeRenderer.polyline(calcPath);
+
+		//
 		shapeRenderer.end();
 
 
+	}
+
+	private final Vector3 mouseInWorld3D = new Vector3();
+
+	private void handleInput() {
+		if(Gdx.input.isButtonJustPressed(Input.Buttons.LEFT)){
+			mouseInWorld3D.x = Gdx.input.getX();
+			mouseInWorld3D.y = Gdx.input.getY();
+			mouseInWorld3D.z = 0;
+			cam.unproject(mouseInWorld3D);
+			_path.add(mouseInWorld3D.x, mouseInWorld3D.y);
+		}
+		if(Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
+			_path.clear();
+		}
+		if(Gdx.input.isKeyJustPressed(Input.Keys.NUM_1)) {
+			_type = JoinType.Pointy;
+		}
+		if(Gdx.input.isKeyJustPressed(Input.Keys.NUM_2)) {
+			_type = JoinType.Smooth;
+		}
+		if(Gdx.input.isKeyJustPressed(Input.Keys.NUM_3)) {
+			_type = JoinType.Round;
+		}
+		if(Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
+			_open = !_open;
+		}
+	}
+
+	@Override
+	public void resize(int width, int height) {
+		cam.viewportWidth = width;
+		cam.viewportHeight = height;
+		cam.position.set(cam.viewportWidth / 2f, cam.viewportHeight / 2f, 0);
+		cam.update();
 	}
 
 	void pointAt(float x, float y) {
@@ -278,8 +328,8 @@ public class GdxTest extends ApplicationAdapter {
 				inner.add(E.x);
 				inner.add(E.y);
 
-				outer.add(D0.x);
-				outer.add(D0.y);
+//				outer.add(D0.x);
+//				outer.add(D0.y);
 			}
 		}
 
@@ -308,7 +358,7 @@ public class GdxTest extends ApplicationAdapter {
 		if(endAngle < 0) {
 			endAngle += MathUtils.PI2;
 		}
-
+		var oldColor = shapeRenderer.getColor().cpy();
 		var sides = estimateSidesRequired(radius, radius);
 		var deltaAngle = (endAngle + MathUtils.PI2 - startAngle) % MathUtils.PI2;
 		if(clockwise) {
@@ -332,13 +382,14 @@ public class GdxTest extends ApplicationAdapter {
 			list.add(y);
 			if(i == 0) {
 				shapeRenderer.setColor(Color.YELLOW);
-				pointAt(x, y);
+				//pointAt(x, y);
 			}
 			if(i == sides) {
 				shapeRenderer.setColor(Color.CYAN);
-				pointAt(x, y);
+				//pointAt(x, y);
 			}
 		}
+		shapeRenderer.setColor(oldColor);
 	}
 
 
