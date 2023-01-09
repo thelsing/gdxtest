@@ -11,6 +11,7 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Bezier;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.FloatArray;
 import space.earlygrey.shapedrawer.*;
 
@@ -68,13 +69,32 @@ public class GdxTest extends ApplicationAdapter {
 		batch.end();
 		shapeRenderer.begin();
 		shapeRenderer.setColor(Color.YELLOW);
+
+//		var v1 = new Vector2();
+//		v1.set(-1.0f, -1.0f);
+//		var angle = v1.angleRad();
+//
+//		var v2 = new Vector2();
+//		v2.set(0f, -1.0f);
+//		angle = v2.angleRad();
+//
+//		var arc = new ArrayList<Float>();
+//		addArc(arc, 200, 200, 100, v1.angleRad(), v2.angleRad(), false);
+//		var calcPath = new float[arc.size()];
+//		var i = 0;
+//		for(var f : arc)
+//			calcPath[i++] = f;
+
+
+
+
 		var calcPath = path(FloatArray.with(path), wall, JoinType.Round, true);
 		//sprite.drawDebug(shapeRenderer, Color.CORAL);
 		shapeRenderer.setColor(Color.RED);
 		for(var i = 1; i<path.length; i+=2)
 			pointAt(path[i-1], path[i]);
 
-		shapeRenderer.polyline(path);
+//		shapeRenderer.polyline(path);
 		//shapeRenderer.setColor(Color.BLUE);
 		//shapeRenderer.polyline(vertices);
 		shapeRenderer.setColor(Color.GREEN);
@@ -122,7 +142,8 @@ public class GdxTest extends ApplicationAdapter {
 						outer.add(D.x);
 						outer.add(D.y);
 						vec1.set(D).add(-A.x, - A.y);
-						addArc(inner, A.x, A.y, halfWidth, vec1.angleRad(), MathUtils.PI, false, 0);
+						var angle = vec1.angleRad();
+						addArc(inner, A.x, A.y, halfWidth, angle, angle + MathUtils.PI, false);
 						inner.add(E.x);
 						inner.add(E.y);
 					} else {
@@ -171,16 +192,25 @@ public class GdxTest extends ApplicationAdapter {
 
 				Joiner.prepareSmoothJoin(A, B, C, D, E, halfWidth, true);
 				if(bendsLeft) {
+					if(joinType == JoinType.Round) {
+						AB.set(B).sub(A);
+						BC.set(C).sub(B);
+						vec1.add(-B.x, - B.y);
+						var angle = vec1.angleRad();
+						var angleDiff = MathUtils.PI2 - ShapeUtils.angleRad(AB, BC);
+						addArc(inner, B.x, B.y, halfWidth, angle, angle + angleDiff, false);
+					}
 					inner.add(E.x);
 					inner.add(E.y);
 				} else {
-//					if(joinType == JoinType.Round) {
-//						AB.set(B).sub(A);
-//						BC.set(C).sub(B);
-//						vec1.add(-B.x, - B.y);
-//						var angle = ShapeUtils.angleRad(AB, BC);
-//						addArc(outer, B.x, B.y, halfWidth, vec1.angleRad(), angle, true, 0);
-//					}
+					if(joinType == JoinType.Round) {
+						AB.set(B).sub(A);
+						BC.set(C).sub(B);
+						vec1.add(-B.x, - B.y);
+						var angle = vec1.angleRad();
+						var angleDiff = MathUtils.PI2 - ShapeUtils.angleRad(AB, BC);
+						addArc(outer, B.x, B.y, halfWidth, angle, angle + angleDiff, true);
+					}
 					outer.add(D.x);
 					outer.add(D.y);
 				}
@@ -194,7 +224,8 @@ public class GdxTest extends ApplicationAdapter {
 				inner.add(D.x);
 				inner.add(D.y);
 				vec1.set(D).add(-C.x, - C.y);
-				addArc(inner, C.x, C.y, halfWidth, vec1.angleRad(), MathUtils.PI, false, 0);
+				var angle = vec1.angleRad();
+				addArc(inner, C.x, C.y, halfWidth, angle, angle + MathUtils.PI, false);
 			} else {
 				Joiner.prepareSquareEndpoint(B, C, D, E, halfWidth);
 				outer.add(E.x);
@@ -269,46 +300,43 @@ public class GdxTest extends ApplicationAdapter {
 	private Vector2 B1 = new Vector2();
 	private Vector2 dir = new Vector2();
 
-	private void addArc(List<Float> list, float centreX, float centreY, float radius, float startAngle, float radians, boolean clockwise, float rotation){
-		var sides = estimateSidesRequired(radius, radius);
-		float angleInterval = MathUtils.PI2 / sides;
-		float endAngle = startAngle + radians;
-		if(clockwise) {
-			angleInterval *= -1;
+	private void addArc(List<Float> list, float centreX, float centreY, float radius, float startAngle, float endAngle, boolean clockwise){
+		if(startAngle < 0) {
+			startAngle += MathUtils.PI2;
 		}
 
+		if(endAngle < 0) {
+			endAngle += MathUtils.PI2;
+		}
 
-		float cos = (float) Math.cos(angleInterval), sin = (float) Math.sin(angleInterval);
-		float cosRot = (float) Math.cos(rotation), sinRot = (float) Math.sin(rotation);
+		var sides = estimateSidesRequired(radius, radius);
+		var deltaAngle = (endAngle + MathUtils.PI2 - startAngle) % MathUtils.PI2;
+		if(clockwise) {
+			deltaAngle = MathUtils.PI2 - deltaAngle;
+		}
 
-		int start = (int) Math.ceil(sides * (startAngle / ShapeUtils.PI2));
-		int end = (int) Math.floor(sides * (endAngle / ShapeUtils.PI2)) + 1;
+		var dAnglePerSide = deltaAngle / sides;
+		var angle = startAngle;
+		if(clockwise) {
+			dAnglePerSide *= -1;
+		}
 
-		dir.set(1, 0).rotateRad(Math.min(start * angleInterval, endAngle));
-		A1.set(1, 0).rotateRad(clockwise ? endAngle : startAngle).scl(radius);
-		B1.set(dir).scl(radius);
-		boolean draw = true;
-		shapeRenderer.setColor(Color.YELLOW);
-		for (int i = start; i <= end; i++) {
-			float x1 = A1.x*cosRot-A1.y*sinRot  + centreX, y1 = A1.x*sinRot+A1.y*cosRot + centreY;
-//			float x2 = B1.x*cosRot-B1.y*sinRot  + centreX, y2 = B1.x*sinRot+B1.y*cosRot + centreY;
-			list.add(x1);
-			list.add(y1);
-			if(draw) {
-				pointAt(x1, y1);
-				draw = false;
+		for (var i = 0; i<=sides; i++) {
+			var cos = MathUtils.cos(angle);
+			var sin = MathUtils.sin(angle);
+			angle += dAnglePerSide;
+			var x = centreX + cos * radius;
+			var y = centreY + sin * radius;
+
+			list.add(x);
+			list.add(y);
+			if(i == 0) {
+				shapeRenderer.setColor(Color.YELLOW);
+				pointAt(x, y);
 			}
-//			list.add(x2);
-//			list.add(y2);
-			if (i<end-1) {
-				A1.set(B1);
-				dir.set(dir.x * cos - dir.y * sin, dir.x * sin + dir.y * cos);
-				B1.set(dir).scl(radius);
-			} else if (i==end-1) {
-				A1.set(B1);
-				B1.set(1, 0).rotateRad(endAngle).scl(radius);
-				draw = true;
+			if(i == sides) {
 				shapeRenderer.setColor(Color.CYAN);
+				pointAt(x, y);
 			}
 		}
 	}
