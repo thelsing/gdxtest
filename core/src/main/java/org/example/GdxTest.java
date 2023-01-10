@@ -87,11 +87,13 @@ public class GdxTest extends ApplicationAdapter {
 		var region = new TextureRegion(image);
 		region.flip(false, true);
 
-		if(_path.size >= 6) {
-			_calcPath = path(_path, wall, _type, _open);
+		_calcPath = path(_path, wall, _type, _open);
+
+
+		if(_path.size >= 2) {
 			sprite.setVertices(_calcPath);
 			//sprite.setTextureRegion(region);
-			sprite.draw(batch);
+			//sprite.draw(batch);
 			//batch.draw(image, 140, 210);
 		}
 		batch.end();
@@ -103,13 +105,15 @@ public class GdxTest extends ApplicationAdapter {
 		for(var i = 1; i<_path.size; i+=2)
 			pointAt(_path.get(i-1), _path.get(i));
 
-		if(_path.size >= 6) {
+		if(_path.size >= 4) {
 			//var calcPath = path(_path, wall, _type, _open);
 			shapeRenderer.polyline(_path.toArray());
-			shapeRenderer.setColor(Color.GREEN);
-			shapeRenderer.polyline(_calcPath);
-			sprite.drawDebug(shapeRenderer, Color.CORAL);
+
+			//sprite.drawDebug(shapeRenderer, Color.CORAL);
 		}
+		shapeRenderer.setColor(Color.GREEN);
+		if(_path.size >=2)
+		  shapeRenderer.polyline(_calcPath);
 		//shapeRenderer.setColor(Color.BLUE);
 		//shapeRenderer.polyline(vertices);
 
@@ -181,158 +185,257 @@ public class GdxTest extends ApplicationAdapter {
 		var inner = new ArrayList<Float>();
 
 		float halfWidth = lineWidth/2f;
-		for (int i = 2; i < path.size - 2; i+=2) {
-			A.set(path.get(i-2), path.get(i-1));
-			B.set(path.get(i), path.get(i+1));
-			C.set(path.get(i+2), path.get(i+3));
-			if (i == 2) {
-				if(open) {
-					if(joinType == JoinType.Round) {
-						Joiner.prepareFlatEndpoint(B, A, D, E, halfWidth);
-						outer.add(D.x);
-						outer.add(D.y);
-						vec1.set(D).add(-A.x, - A.y);
-						var angle = vec1.angleRad();
-						addArc(inner, A.x, A.y, halfWidth, angle, angle + MathUtils.PI, false);
-						inner.add(E.x);
-						inner.add(E.y);
+
+		if(path.size == 2) {
+			var x = path.get(0);
+			var y = path.get(1);
+			if(joinType == JoinType.Round) {
+				addArc(outer, x, y,  halfWidth, 0, MathUtils.PI2-0.1f, false);
+			} else {
+				outer.add(x-halfWidth);
+				outer.add(y-halfWidth);
+				outer.add(x-halfWidth);
+				outer.add(y+halfWidth);
+				outer.add(x+halfWidth);
+				outer.add(y+halfWidth);
+				outer.add(x+halfWidth);
+				outer.add(y-halfWidth);
+				outer.add(x-halfWidth);
+				outer.add(y-halfWidth);
+			}
+
+		} else if(path.size == 4) {
+			A.set(path.get(0), path.get(1));
+			B.set(path.get(2), path.get(3));
+			if(joinType == JoinType.Round) {
+				Joiner.prepareFlatEndpoint(B, A, D, E, halfWidth);
+				E0.set(D);
+				outer.add(D.x);
+				outer.add(D.y);
+				vec1.set(D).add(-A.x, -A.y);
+				var angle = vec1.angleRad();
+				addArc(outer, A.x, A.y, halfWidth, angle, angle + MathUtils.PI, false);
+				outer.add(E.x);
+				outer.add(E.y);
+
+				Joiner.prepareFlatEndpoint(A, B, D, E, halfWidth);
+				outer.add(D.x);
+				outer.add(D.y);
+				vec1.set(D).add(-B.x, -B.y);
+				angle = vec1.angleRad();
+				addArc(outer, B.x, B.y, halfWidth, angle, angle + MathUtils.PI, false);
+				outer.add(E.x);
+				outer.add(E.y);
+				outer.add(E0.x);
+				outer.add(E0.y);
+			} else {
+				Joiner.prepareSquareEndpoint(B, A, D, E, halfWidth);
+				E0.set(D);
+				outer.add(D.x);
+				outer.add(D.y);
+				outer.add(E.x);
+				outer.add(E.y);
+				Joiner.prepareSquareEndpoint(A, B, D, E, halfWidth);
+				outer.add(D.x);
+				outer.add(D.y);
+				outer.add(E.x);
+				outer.add(E.y);
+				outer.add(E0.x);
+				outer.add(E0.y);
+			}
+
+		} else {
+
+
+			for (int i = 2; i < path.size - 2; i += 2) {
+				A.set(path.get(i - 2), path.get(i - 1));
+				B.set(path.get(i), path.get(i + 1));
+				C.set(path.get(i + 2), path.get(i + 3));
+				if (i == 2) {
+					if (open) {
+						if (joinType == JoinType.Round) {
+							Joiner.prepareFlatEndpoint(B, A, D, E, halfWidth);
+							outer.add(D.x);
+							outer.add(D.y);
+							vec1.set(D).add(-A.x, -A.y);
+							var angle = vec1.angleRad();
+							addArc(inner, A.x, A.y, halfWidth, angle, angle + MathUtils.PI, false);
+							inner.add(E.x);
+							inner.add(E.y);
+						} else {
+							Joiner.prepareSquareEndpoint(B, A, D, E, halfWidth);
+							outer.add(D.x);
+							outer.add(D.y);
+
+							// add link at start
+							inner.add(D.x);
+							inner.add(D.y);
+
+							inner.add(E.x);
+							inner.add(E.y);
+						}
 					} else {
-						Joiner.prepareSquareEndpoint(B, A, D, E, halfWidth);
-						outer.add(D.x);
-						outer.add(D.y);
-
-						// add link at start
-						inner.add(D.x);
-						inner.add(D.y);
-
-						inner.add(E.x);
-						inner.add(E.y);
+						vec1.set(path.get(path.size - 2), path.get(path.size - 1));
+						if (joinType == JoinType.Pointy) {
+							Joiner.preparePointyJoin(vec1, A, B, D0, E0, halfWidth);
+						} else {
+							Joiner.prepareSmoothJoin(vec1, A, B, D0, E0, halfWidth, true);
+						}
+						outer.add(D0.x);
+						outer.add(D0.y);
+						inner.add(E0.x);
+						inner.add(E0.y);
 					}
+				}
+				if (joinType == JoinType.Pointy) {
+					Joiner.preparePointyJoin(A, B, C, D, E, halfWidth);
+					outer.add(D.x);
+					outer.add(D.y);
+					inner.add(E.x);
+					inner.add(E.y);
 				} else {
-					vec1.set(path.get(path.size - 2), path.get(path.size - 1));
-					if (joinType == JoinType.Pointy) {
-						Joiner.preparePointyJoin(vec1, A, B, D0, E0, halfWidth);
+					var bendsLeft = Joiner.prepareSmoothJoin(A, B, C, D, E, halfWidth, false);
+					if (bendsLeft) {
+						vec1.set(E);
 					} else {
-						Joiner.prepareSmoothJoin(vec1, A, B, D0, E0, halfWidth, true);
+						vec1.set(D);
 					}
+					outer.add(D.x);
+					outer.add(D.y);
+					inner.add(E.x);
+					inner.add(E.y);
+					//shapeRenderer.circle(B.x, B.y, halfWidth);
+
+					Joiner.prepareSmoothJoin(A, B, C, D, E, halfWidth, true);
+					if (bendsLeft) {
+						if (joinType == JoinType.Round) {
+							AB.set(B).sub(A);
+							BC.set(C).sub(B);
+							vec1.add(-B.x, -B.y);
+							var angle = vec1.angleRad();
+							var angleDiff = MathUtils.PI2 - ShapeUtils.angleRad(AB, BC);
+							addArc(inner, B.x, B.y, halfWidth, angle, angle + angleDiff, false);
+						}
+						inner.add(E.x);
+						inner.add(E.y);
+					} else {
+						if (joinType == JoinType.Round) {
+							AB.set(B).sub(A);
+							BC.set(C).sub(B);
+							vec1.add(-B.x, -B.y);
+							var angle = vec1.angleRad();
+							var angleDiff = MathUtils.PI2 - ShapeUtils.angleRad(AB, BC);
+							addArc(outer, B.x, B.y, halfWidth, angle, angle + angleDiff, true);
+						}
+						outer.add(D.x);
+						outer.add(D.y);
+					}
+				}
+			}
+			if (open) {
+				if (joinType == JoinType.Round) {
+					Joiner.prepareFlatEndpoint(B, C, D, E, halfWidth);
+					outer.add(E.x);
+					outer.add(E.y);
+					inner.add(D.x);
+					inner.add(D.y);
+					vec1.set(D).add(-C.x, -C.y);
+					var angle = vec1.angleRad();
+					addArc(inner, C.x, C.y, halfWidth, angle, angle + MathUtils.PI, false);
+				} else {
+					Joiner.prepareSquareEndpoint(B, C, D, E, halfWidth);
+					outer.add(E.x);
+					outer.add(E.y);
+
+					inner.add(D.x);
+					inner.add(D.y);
+				}
+			} else {
+				if (joinType == JoinType.Pointy) {
+					//draw last link on path
+					A.set(path.get(0), path.get(1));
+					Joiner.preparePointyJoin(B, C, A, D, E, halfWidth);
+					outer.add(D.x);
+					outer.add(D.y);
+					inner.add(E.x);
+					inner.add(E.y);
+
+					//draw connection back to first vertex
 					outer.add(D0.x);
 					outer.add(D0.y);
 					inner.add(E0.x);
 					inner.add(E0.y);
-				}
-			}
-			if (joinType == JoinType.Pointy) {
-				Joiner.preparePointyJoin(A, B, C, D, E, halfWidth);
-				outer.add(D.x);
-				outer.add(D.y);
-				inner.add(E.x);
-				inner.add(E.y);
-			} else {
-				var bendsLeft = Joiner.prepareSmoothJoin(A, B, C, D, E, halfWidth, false);
-				if(bendsLeft) {
-					vec1.set(E);
-				} else {
-					vec1.set(D);
-				}
-				outer.add(D.x);
-				outer.add(D.y);
-				inner.add(E.x);
-				inner.add(E.y);
-				//shapeRenderer.circle(B.x, B.y, halfWidth);
 
-				Joiner.prepareSmoothJoin(A, B, C, D, E, halfWidth, true);
-				if(bendsLeft) {
-					if(joinType == JoinType.Round) {
-						AB.set(B).sub(A);
-						BC.set(C).sub(B);
-						vec1.add(-B.x, - B.y);
-						var angle = vec1.angleRad();
-						var angleDiff = MathUtils.PI2 - ShapeUtils.angleRad(AB, BC);
-						addArc(inner, B.x, B.y, halfWidth, angle, angle + angleDiff, false);
+				} else {
+					//draw last link on path
+					A.set(B);
+					B.set(C);
+					C.set(path.get(0), path.get(1));
+					var bendsLeft = Joiner.prepareSmoothJoin(A, B, C, D, E, halfWidth, false);
+					if (bendsLeft) {
+						vec1.set(E);
+					} else {
+						vec1.set(D);
 					}
+					outer.add(D.x);
+					outer.add(D.y);
 					inner.add(E.x);
 					inner.add(E.y);
-				} else {
-					if(joinType == JoinType.Round) {
+
+					//draw connection back to first vertex
+					Joiner.prepareSmoothJoin(A, B, C, D, E, halfWidth, true);
+					if (bendsLeft) {
+						if (joinType == JoinType.Round) {
+							AB.set(B).sub(A);
+							BC.set(C).sub(B);
+							vec1.add(-B.x, -B.y);
+							var angle = vec1.angleRad();
+							var angleDiff = MathUtils.PI2 - ShapeUtils.angleRad(AB, BC);
+							addArc(inner, B.x, B.y, halfWidth, angle, angle + angleDiff, false);
+						}
+						inner.add(E.x);
+						inner.add(E.y);
+					} else {
+						if (joinType == JoinType.Round) {
+							AB.set(B).sub(A);
+							BC.set(C).sub(B);
+							vec1.add(-B.x, -B.y);
+							var angle = vec1.angleRad();
+							var angleDiff = MathUtils.PI2 - ShapeUtils.angleRad(AB, BC);
+							addArc(outer, B.x, B.y, halfWidth, angle, angle + angleDiff, true);
+						}
+						outer.add(D.x);
+						outer.add(D.y);
+					}
+
+					A.set(B);
+					B.set(C);
+					C.set(path.get(2), path.get(3));
+					bendsLeft = Joiner.prepareSmoothJoin(A, B, C, D, E, halfWidth, false);
+					if (bendsLeft) {
+						vec1.set(E);
+					} else {
+						vec1.set(D);
+					}
+					outer.add(D.x);
+					outer.add(D.y);
+					inner.add(E.x);
+					inner.add(E.y);
+
+					if (joinType == JoinType.Round) {
 						AB.set(B).sub(A);
 						BC.set(C).sub(B);
-						vec1.add(-B.x, - B.y);
+						vec1.add(-B.x, -B.y);
 						var angle = vec1.angleRad();
 						var angleDiff = MathUtils.PI2 - ShapeUtils.angleRad(AB, BC);
 						addArc(outer, B.x, B.y, halfWidth, angle, angle + angleDiff, true);
 					}
-					outer.add(D.x);
-					outer.add(D.y);
+
+					outer.add(D0.x);
+					outer.add(D0.y);
 				}
 			}
 		}
-		if (open) {
-			if(joinType == JoinType.Round) {
-				Joiner.prepareFlatEndpoint(B, C, D, E, halfWidth);
-				outer.add(E.x);
-				outer.add(E.y);
-				inner.add(D.x);
-				inner.add(D.y);
-				vec1.set(D).add(-C.x, - C.y);
-				var angle = vec1.angleRad();
-				addArc(inner, C.x, C.y, halfWidth, angle, angle + MathUtils.PI, false);
-			} else {
-				Joiner.prepareSquareEndpoint(B, C, D, E, halfWidth);
-				outer.add(E.x);
-				outer.add(E.y);
-
-				inner.add(D.x);
-				inner.add(D.y);
-			}
-		} else {
-			if (joinType == JoinType.Pointy) {
-				//draw last link on path
-				A.set(path.get(0), path.get(1));
-				Joiner.preparePointyJoin(B, C, A, D, E, halfWidth);
-				outer.add(D.x);
-				outer.add(D.y);
-				inner.add(E.x);
-				inner.add(E.y);
-
-				//draw connection back to first vertex
-				outer.add(D0.x);
-				outer.add(D0.y);
-				inner.add(E0.x);
-				inner.add(E0.y);
-
-			} else {
-				//draw last link on path
-				A.set(B);
-				B.set(C);
-				C.set(path.get(0), path.get(1));
-				Joiner.prepareSmoothJoin(A, B, C, D, E, halfWidth, false);
-				outer.add(D.x);
-				outer.add(D.y);
-				inner.add(E.x);
-				inner.add(E.y);
-
-				//draw connection back to first vertex
-				var bendsLeft =  Joiner.prepareSmoothJoin(A, B, C, D, E, halfWidth, true);
-				if(bendsLeft) {
-					inner.add(E.x);
-					inner.add(E.y);
-				} else {
-					outer.add(D.x);
-					outer.add(D.y);
-				}
-
-				A.set(path.get(2), path.get(3));
-				bendsLeft =  Joiner.prepareSmoothJoin(B, C, A, D, E, halfWidth, false);
-				outer.add(D.x);
-				outer.add(D.y);
-				inner.add(E.x);
-				inner.add(E.y);
-
-//				outer.add(D0.x);
-//				outer.add(D0.y);
-			}
-		}
-
 		float[] floatArray = new float[outer.size()+ inner.size()];
 		int i = 0;
 
