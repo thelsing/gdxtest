@@ -46,6 +46,7 @@ public class GdxTest extends ApplicationAdapter {
 		drawer = new ShapeDrawer(batch);
 		region = new TextureRegion(image);
 		region.flip(false, true);
+		createSprite();
 
 		float w = Gdx.graphics.getWidth();
 		float h = Gdx.graphics.getHeight();
@@ -72,39 +73,24 @@ public class GdxTest extends ApplicationAdapter {
 		handleInput();
 		Gdx.gl.glClearColor(0.15f, 0.15f, 0.2f, 1f);
 		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
-		if(_path.size == 0)
-			return;
 		cam.update();
 		batch.setProjectionMatrix(cam.combined);
 		shapeRenderer.setProjectionMatrix(cam.combined);
-		batch.begin();
-// for debugging create new sprite every renderloop
-		sprite = new RepeatablePolygonSprite();
-		sprite.setTextureRegion(region);
 
-		float wall = 100;
-
-		var _path = FloatArray.with(new float[] {
+	/*	var _path = FloatArray.with(new float[] {
 				150,150,
 				150,550,
-	//			350,450,
+				//			350,450,
 				550,550,
 				550,150,
-		});
+		});*/
 
+		if(_path.size == 0)
+			return;
+
+		batch.begin();
+		float wall = 100;
 		_calcPath = path(_path, wall, _type, _open);
-     /* works:
-      _calcPath = new float[] {
-				100.0f, 100.0f,
-				100.0f, 600.0f,
-				600.0f, 600.0f,
-				600.0f, 100.0f,
-				100.0f, 100.0f,
-				200.0f, 200.0f,
-				500.0f, 200.0f,
-				500.0f, 500.0f,
-				200.0f, 500.0f,
-				200.0f, 200.0f};*/
 		if(_path.size >= 2) {
 			sprite.setVertices(_calcPath);
 			if(_draw)
@@ -133,6 +119,11 @@ public class GdxTest extends ApplicationAdapter {
 
 	private final Vector3 mouseInWorld3D = new Vector3();
 
+	private void createSprite() {
+		sprite = new RepeatablePolygonSprite();
+		sprite.setTextureRegion(region);
+	}
+
 	private void handleInput() {
 		if(Gdx.input.isButtonJustPressed(Input.Buttons.LEFT)){
 			mouseInWorld3D.x = Gdx.input.getX();
@@ -140,21 +131,27 @@ public class GdxTest extends ApplicationAdapter {
 			mouseInWorld3D.z = 0;
 			cam.unproject(mouseInWorld3D);
 			_path.add(mouseInWorld3D.x, mouseInWorld3D.y);
+			createSprite();
 		}
 		if(Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
 			_path.clear();
+			createSprite();
 		}
 		if(Gdx.input.isKeyJustPressed(Input.Keys.NUM_1)) {
 			_type = JoinType.Pointy;
+			createSprite();
 		}
 		if(Gdx.input.isKeyJustPressed(Input.Keys.NUM_2)) {
 			_type = JoinType.Smooth;
+			createSprite();
 		}
 		if(Gdx.input.isKeyJustPressed(Input.Keys.NUM_3)) {
 			_type = JoinType.Round;
+			createSprite();
 		}
 		if(Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
 			_open = !_open;
+			createSprite();
 		}
 		if(Gdx.input.isKeyJustPressed(Input.Keys.ALT_LEFT)) {
 			_draw = !_draw;
