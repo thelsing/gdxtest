@@ -23,7 +23,7 @@ import com.badlogic.gdx.utils.ShortArray;
  * @author Avetis Zakharyan (concept and first version)
  * @author Kablion (rewrite)
  */
-public class RepeatablePolygonSprite implements Disposable {
+class RepeatablePolygonSprite implements Disposable {
 
     public enum WrapType {
         STRETCH,REPEAT,REPEAT_MIRRORED
@@ -369,6 +369,7 @@ public class RepeatablePolygonSprite implements Disposable {
             polygon.setVertices(vertices);
         }
         dirtyGrid = true;
+        dirtyAttributes = true;
     }
 
     /**

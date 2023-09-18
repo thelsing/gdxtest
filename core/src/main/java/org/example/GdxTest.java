@@ -24,7 +24,6 @@ import java.util.List;
 
 /** {@link com.badlogic.gdx.ApplicationListener} implementation shared by all platforms. */
 public class GdxTest extends ApplicationAdapter {
-	private static final float POINTS_PER_BEZIER = 10;
 	private PolygonSpriteBatch batch;
 	private Texture image;
 	private RepeatablePolygonSprite sprite;
@@ -41,13 +40,12 @@ public class GdxTest extends ApplicationAdapter {
 	public void create() {
 		batch = new PolygonSpriteBatch();
 		image = new Texture("libgdx.png");
-		sprite = new RepeatablePolygonSprite();
+
 		shapeRenderer = new ShapeRenderer();
 		shapeRenderer.setAutoShapeType(true);
 		drawer = new ShapeDrawer(batch);
 		region = new TextureRegion(image);
 		region.flip(false, true);
-		sprite.setTextureRegion(region);
 
 		float w = Gdx.graphics.getWidth();
 		float h = Gdx.graphics.getHeight();
@@ -61,7 +59,7 @@ public class GdxTest extends ApplicationAdapter {
 	}
 
 	private FloatArray _path = new FloatArray();
-	private JoinType _type = JoinType.Pointy;
+	private JoinType _type = JoinType.Smooth;
 
 	private boolean _open = false;
 
@@ -74,18 +72,22 @@ public class GdxTest extends ApplicationAdapter {
 		handleInput();
 		Gdx.gl.glClearColor(0.15f, 0.15f, 0.2f, 1f);
 		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
-
+		if(_path.size == 0)
+			return;
 		cam.update();
 		batch.setProjectionMatrix(cam.combined);
 		shapeRenderer.setProjectionMatrix(cam.combined);
 		batch.begin();
+// for debugging create new sprite every renderloop
+		sprite = new RepeatablePolygonSprite();
+		sprite.setTextureRegion(region);
 
 		float wall = 100;
 
 		var _path = FloatArray.with(new float[] {
 				150,150,
 				150,550,
-				350,450,
+	//			350,450,
 				550,550,
 				550,150,
 		});
@@ -254,8 +256,6 @@ public class GdxTest extends ApplicationAdapter {
 			}
 
 		} else {
-
-
 			for (int i = 2; i < path.size - 2; i += 2) {
 				A.set(path.get(i - 2), path.get(i - 1));
 				B.set(path.get(i), path.get(i + 1));
@@ -471,7 +471,6 @@ public class GdxTest extends ApplicationAdapter {
 		if(endAngle < 0) {
 			endAngle += MathUtils.PI2;
 		}
-		var oldColor = shapeRenderer.getColor().cpy();
 		var sides = estimateSidesRequired(radius, radius);
 		var deltaAngle = (endAngle + MathUtils.PI2 - startAngle) % MathUtils.PI2;
 		if(clockwise) {
@@ -493,16 +492,7 @@ public class GdxTest extends ApplicationAdapter {
 
 			list.add(x);
 			list.add(y);
-			if(i == 0) {
-				shapeRenderer.setColor(Color.YELLOW);
-				//pointAt(x, y);
-			}
-			if(i == sides) {
-				shapeRenderer.setColor(Color.CYAN);
-				//pointAt(x, y);
-			}
 		}
-		shapeRenderer.setColor(oldColor);
 	}
 
 
