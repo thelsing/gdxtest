@@ -35,6 +35,8 @@ public class GdxTest extends ApplicationAdapter {
 
 	private OrthographicCamera cam;
 
+	private TextureRegion region;
+
 	@Override
 	public void create() {
 		batch = new PolygonSpriteBatch();
@@ -43,6 +45,9 @@ public class GdxTest extends ApplicationAdapter {
 		shapeRenderer = new ShapeRenderer();
 		shapeRenderer.setAutoShapeType(true);
 		drawer = new ShapeDrawer(batch);
+		region = new TextureRegion(image);
+		region.flip(false, true);
+		sprite.setTextureRegion(region);
 
 		float w = Gdx.graphics.getWidth();
 		float h = Gdx.graphics.getHeight();
@@ -58,7 +63,9 @@ public class GdxTest extends ApplicationAdapter {
 	private FloatArray _path = new FloatArray();
 	private JoinType _type = JoinType.Pointy;
 
-	private boolean _open = true;
+	private boolean _open = false;
+
+	private boolean _draw = false;
 
 	private float[] _calcPath;
 
@@ -75,52 +82,51 @@ public class GdxTest extends ApplicationAdapter {
 
 		float wall = 100;
 
-//		var path = new float[] {
-//				150,150,
-//				150,550,
-//				350,450,
-//				550,550,
-//				700,150,
-//		};
-
-
-		var region = new TextureRegion(image);
-		region.flip(false, true);
+		var _path = FloatArray.with(new float[] {
+				150,150,
+				150,550,
+				350,450,
+				550,550,
+				550,150,
+		});
 
 		_calcPath = path(_path, wall, _type, _open);
-
-
+     /* works:
+      _calcPath = new float[] {
+				100.0f, 100.0f,
+				100.0f, 600.0f,
+				600.0f, 600.0f,
+				600.0f, 100.0f,
+				100.0f, 100.0f,
+				200.0f, 200.0f,
+				500.0f, 200.0f,
+				500.0f, 500.0f,
+				200.0f, 500.0f,
+				200.0f, 200.0f};*/
 		if(_path.size >= 2) {
 			sprite.setVertices(_calcPath);
-			//sprite.setTextureRegion(region);
-			//sprite.draw(batch);
-			//batch.draw(image, 140, 210);
+			if(_draw)
+			    sprite.draw(batch);
 		}
 		batch.end();
 		shapeRenderer.begin();
 
-		//
-		//sprite.drawDebug(shapeRenderer, Color.CORAL);
+		// draw the triangles of sprite
+		sprite.drawDebug(shapeRenderer, Color.CORAL);
+
+		// draw the points of the path
 		shapeRenderer.setColor(Color.RED);
 		for(var i = 1; i<_path.size; i+=2)
 			pointAt(_path.get(i-1), _path.get(i));
 
 		if(_path.size >= 4) {
-			//var calcPath = path(_path, wall, _type, _open);
 			shapeRenderer.polyline(_path.toArray());
-
-			//sprite.drawDebug(shapeRenderer, Color.CORAL);
 		}
+		// draw outline in green
 		shapeRenderer.setColor(Color.GREEN);
 		if(_path.size >=2)
 		  shapeRenderer.polyline(_calcPath);
-		//shapeRenderer.setColor(Color.BLUE);
-		//shapeRenderer.polyline(vertices);
-
-		//
 		shapeRenderer.end();
-
-
 	}
 
 	private final Vector3 mouseInWorld3D = new Vector3();
@@ -147,6 +153,9 @@ public class GdxTest extends ApplicationAdapter {
 		}
 		if(Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
 			_open = !_open;
+		}
+		if(Gdx.input.isKeyJustPressed(Input.Keys.ALT_LEFT)) {
+			_draw = !_draw;
 		}
 	}
 
@@ -268,8 +277,8 @@ public class GdxTest extends ApplicationAdapter {
 							outer.add(D.y);
 
 							// add link at start
-							inner.add(D.x);
-							inner.add(D.y);
+						//	inner.add(D.x);
+						//	inner.add(D.y);
 
 							inner.add(E.x);
 							inner.add(E.y);
@@ -281,7 +290,7 @@ public class GdxTest extends ApplicationAdapter {
 						} else {
 							Joiner.prepareSmoothJoin(vec1, A, B, D0, E0, halfWidth, true);
 						}
-						outer.add(D0.x);
+	    				outer.add(D0.x);
 						outer.add(D0.y);
 						inner.add(E0.x);
 						inner.add(E0.y);
@@ -442,6 +451,7 @@ public class GdxTest extends ApplicationAdapter {
 		for (Float f : outer) {
 			floatArray[i++] =  f ;
 		}
+
 		for (int j = 1; j <= inner.size(); j+=2 ) {
 			floatArray[floatArray.length - j] =  inner.get(j);
 			floatArray[floatArray.length - j - 1] =  inner.get(j - 1);
