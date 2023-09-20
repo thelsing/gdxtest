@@ -10,10 +10,7 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.PolygonSpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
-import com.badlogic.gdx.math.Bezier;
-import com.badlogic.gdx.math.MathUtils;
-import com.badlogic.gdx.math.Vector2;
-import com.badlogic.gdx.math.Vector3;
+import com.badlogic.gdx.math.*;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.FloatArray;
 import space.earlygrey.shapedrawer.*;
@@ -60,11 +57,13 @@ public class GdxTest extends ApplicationAdapter {
 	}
 
 	private FloatArray _path = new FloatArray();
-	private JoinType _type = JoinType.Smooth;
+	private JoinType _type = JoinType.Pointy;
 
-	private boolean _open = false;
+	private boolean _open = true;
 
 	private boolean _draw = false;
+
+	private boolean _printDebug = false;
 
 	private float[] _calcPath;
 
@@ -76,15 +75,14 @@ public class GdxTest extends ApplicationAdapter {
 		cam.update();
 		batch.setProjectionMatrix(cam.combined);
 		shapeRenderer.setProjectionMatrix(cam.combined);
-
-	/*	var _path = FloatArray.with(new float[] {
+/*
+		var _path = FloatArray.with(new float[] {
 				150,150,
-				150,550,
-				//			350,450,
-				550,550,
-				550,150,
-		});*/
-
+				150,250,
+				360,250,
+				360,150,
+		});
+*/
 		if(_path.size == 0)
 			return;
 
@@ -100,10 +98,11 @@ public class GdxTest extends ApplicationAdapter {
 		shapeRenderer.begin();
 
 		// draw the triangles of sprite
-		sprite.drawDebug(shapeRenderer, Color.CORAL);
+		if(_printDebug)
+			sprite.drawDebug(shapeRenderer, Color.CORAL);
 
 		// draw the points of the path
-		shapeRenderer.setColor(Color.RED);
+	/*	shapeRenderer.setColor(Color.RED);
 		for(var i = 1; i<_path.size; i+=2)
 			pointAt(_path.get(i-1), _path.get(i));
 
@@ -114,7 +113,10 @@ public class GdxTest extends ApplicationAdapter {
 		shapeRenderer.setColor(Color.GREEN);
 		if(_path.size >=2)
 		  shapeRenderer.polyline(_calcPath);
+
+	 */
 		shapeRenderer.end();
+
 	}
 
 	private final Vector3 mouseInWorld3D = new Vector3();
@@ -122,6 +124,7 @@ public class GdxTest extends ApplicationAdapter {
 	private void createSprite() {
 		sprite = new RepeatablePolygonSprite();
 		sprite.setTextureRegion(region);
+		sprite.setDensity(100);
 	}
 
 	private void handleInput() {
@@ -155,6 +158,9 @@ public class GdxTest extends ApplicationAdapter {
 		}
 		if(Gdx.input.isKeyJustPressed(Input.Keys.ALT_LEFT)) {
 			_draw = !_draw;
+		}
+		if(Gdx.input.isKeyJustPressed(Input.Keys.CONTROL_LEFT)) {
+			_printDebug = !_printDebug;
 		}
 	}
 

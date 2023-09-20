@@ -14,6 +14,7 @@ import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Disposable;
+import com.badlogic.gdx.utils.FloatArray;
 import com.badlogic.gdx.utils.ShortArray;
 
 /**
@@ -68,6 +69,16 @@ class RepeatablePolygonSprite implements Disposable {
         pixmap.dispose();
     }
 
+    private float colsPerRegion = 1;
+    private float rowsPerRegion = 1;
+    private float density = 0;
+    public float getDensity() {
+        return density;
+    }
+
+    public void setDensity(float value) {
+        density = value;
+    }
     /**
      * calculates the grid and the parts in relation to the texture Origin
      */
@@ -84,15 +95,21 @@ class RepeatablePolygonSprite implements Disposable {
         int idx;
 
         Rectangle bounds = polygon.getBoundingRectangle();
-
+        float regionAspectRatio = textureHeight / textureWidth;
 
         if (wrapTypeX == WrapType.STRETCH || textureRegion == null) {
             gridWidth = bounds.getWidth();
+        } else if(density != 0  && density < textureWidth) {
+            colsPerRegion = MathUtils.ceil(textureWidth/density);
+            gridWidth = textureWidth/colsPerRegion;
         } else {
             gridWidth = textureWidth;
         }
         if (wrapTypeY == WrapType.STRETCH || textureRegion == null) {
             gridHeight = bounds.getHeight();
+        } else if(density != 0 && density < textureHeight) {
+            rowsPerRegion = MathUtils.ceil(textureHeight/density);
+            gridHeight = textureHeight/rowsPerRegion;
         } else {
             gridHeight = textureHeight;
         }
@@ -105,7 +122,7 @@ class RepeatablePolygonSprite implements Disposable {
         if (bounds.getX() + bounds.getWidth() > (cols + gridOffset.x) * gridWidth) cols++;
         rows = (int) Math.ceil(bounds.getHeight() / gridHeight);
         if (bounds.getY() + bounds.getHeight() > (rows + gridOffset.y) * gridHeight) rows++;
-
+        var checkedVerts = new FloatArray();
         for (int col = 0; col < cols; col++) {
             for (int row = 0; row < rows; row++) {
                 float[] verts = new float[8];
@@ -128,9 +145,60 @@ class RepeatablePolygonSprite implements Disposable {
                 tmpPoly.setVertices(verts);
 
                 Intersector.intersectPolygons(polygon, tmpPoly, intersectionPoly);
+                checkedVerts.clear();
+
+                var clipx1 = verts[0];
+                var clipy1 = verts[1];
+                var clipx2 = verts[4];
+                var clipy2 = verts[5];
                 verts = intersectionPoly.getVertices();
-                if (verts.length > 0) {
-                    parts.add(snapToGrid(verts, offsettedRow, offsettedCol));
+                verts = snapToGrid(verts, offsettedRow, offsettedCol);
+                for(int i = 0; i< verts.length; i+=2) {
+                    var x1 = verts[i];
+                    var y1 = verts[i+1];
+                    if(i+2 >= verts.length) {
+                        checkedVerts.add(x1,y1);
+                        break;
+                    }
+                    var x2 = verts[i+2];
+                    var y2 = verts[i+3];
+                    if(x1 == x2 && y1 == y2) {
+                        checkedVerts.add(x1, y1);
+                        i+=2;
+                        continue;
+                    }
+
+
+                    if(i+4 >= verts.length) {
+                        checkedVerts.add(x1,y1);
+                        checkedVerts.add(x2,y2);
+                        break;
+                    }
+                    var x3 = verts[i+4];
+                    var y3 = verts[i+5];
+
+
+                    if(x1 == x2 && x2 == x3 && (x1 == clipx1 || x1 == clipx2)) {
+                        checkedVerts.add(x1, y1);
+                        checkedVerts.add(x3, y3);
+                        i += 4;
+                        continue;
+                    }
+
+                    if(y1 == y2 && y2 == y3 && (y1 == clipy1 || y1 == clipy2)) {
+                        checkedVerts.add(x1, y1);
+                        checkedVerts.add(x3, y3);
+
+                        i += 4;
+                        continue;
+                    }
+                    checkedVerts.add(x1, y1);
+                }
+
+
+                verts = checkedVerts.toArray();
+                if (verts.length > 5) {
+                    parts.add(verts);
                     ShortArray arr = triangulator.computeTriangles(verts);
                     indices.add(arr.toArray());
                 } else {
@@ -162,6 +230,8 @@ class RepeatablePolygonSprite implements Disposable {
             int offsettedCol = col + (int) gridOffset.x;
             int offsettedRow = row + (int) gridOffset.y;
 
+            var region = textureRegion != null ? textureRegion : whiteTextureRegion;
+
             for (int j = 0; j < verts.length; j += 2) {
                 float x = (verts[j] + buildOffset.x + textureOffset.x) - getOriginX();
                 x *= getScaleX();
@@ -181,10 +251,18 @@ class RepeatablePolygonSprite implements Disposable {
 
                 fullVerts[idx++] = color.toFloatBits();
 
-                float inGridX = verts[j] - offsettedCol * gridWidth;
-                float inGridY = verts[j + 1] - offsettedRow * gridHeight;
-                float u = inGridX / gridWidth;
-                float v = inGridY / gridHeight;
+              //  float inGridX = verts[j] - offsettedCol * gridWidth;
+              //  float inGridY = verts[j + 1] - offsettedRow * gridHeight;
+                float inGridX = colsPerRegion > 1 ? verts[j] % textureWidth : verts[j] - offsettedCol * gridWidth;
+                if(inGridX == 0 && colsPerRegion > 1 && col % colsPerRegion != 0)
+                    inGridX = textureWidth;
+
+                float inGridY = rowsPerRegion > 1 ? verts[j+1] % textureHeight : verts[j + 1] - offsettedRow * gridHeight;
+                if(inGridX == 0 && rowsPerRegion > 1 && row % rowsPerRegion != 0)
+                    inGridY = textureHeight;
+
+                float u = inGridX / textureWidth;
+                float v = inGridY / textureHeight;
                 if (u > 1.0f) u = 1.0f;
                 if (v > 1.0f) v = 1.0f;
                 if (u < 0.0f) u = 0.0f;
@@ -193,13 +271,8 @@ class RepeatablePolygonSprite implements Disposable {
                 if (wrapTypeX == WrapType.REPEAT_MIRRORED & (col & 1) != 0) u = 1 - u;
                 if (wrapTypeY == WrapType.REPEAT_MIRRORED & (row & 1) == 0) v = 1 - v;
 
-                if (textureRegion != null) {
-                    u = textureRegion.getU() + (textureRegion.getU2() - textureRegion.getU()) * u;
-                    v = textureRegion.getV() + (textureRegion.getV2() - textureRegion.getV()) * v;
-                } else {
-                    u = whiteTextureRegion.getU() + (whiteTextureRegion.getU2() - whiteTextureRegion.getU()) * u;
-                    v = whiteTextureRegion.getV() + (whiteTextureRegion.getV2() - whiteTextureRegion.getV()) * v;
-                }
+                u = region.getU() + (region.getU2() - region.getU()) * u;
+                v = region.getV() + (region.getV2() - region.getV()) * v;
                 fullVerts[idx++] = u;
                 fullVerts[idx++] = v;
             }
