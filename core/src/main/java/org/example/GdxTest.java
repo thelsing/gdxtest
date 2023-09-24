@@ -440,16 +440,30 @@ public class GdxTest extends ApplicationAdapter {
 					inner.add(E.y);
 
 					if (joinType == JoinType.Round) {
-						AB.set(B).sub(A);
-						BC.set(C).sub(B);
-						vec1.add(-B.x, -B.y);
-						var angle = vec1.angleRad();
-						var angleDiff = MathUtils.PI2 - ShapeUtils.angleRad(AB, BC);
-						addArc(outer, B.x, B.y, halfWidth, angle, angle + angleDiff, true);
+							AB.set(B).sub(A);
+							BC.set(C).sub(B);
+							vec1.add(-B.x, -B.y);
+							var angle = vec1.angleRad();
+							var angleDiff = MathUtils.PI2 - ShapeUtils.angleRad(AB, BC);
+							if (bendsLeft) {
+								addArc(inner, B.x, B.y, halfWidth, angle, angle + angleDiff, false);
+								inner.add(E0.x);
+								inner.add(E0.y);
+							} else {
+								addArc(outer, B.x, B.y, halfWidth, angle, angle + angleDiff, true);
+								outer.add(D0.x);
+								outer.add(D0.y);
+							}
+					} else {
+						if (bendsLeft) {
+							inner.add(E0.x);
+							inner.add(E0.y);
+						} else {
+							outer.add(D0.x);
+							outer.add(D0.y);
+						}
 					}
 
-					outer.add(D0.x);
-					outer.add(D0.y);
 				}
 			}
 		}
