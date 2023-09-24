@@ -3,10 +3,10 @@ package org.example;
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
+import com.badlogic.gdx.graphics.*;
 import com.badlogic.gdx.graphics.Color;
-import com.badlogic.gdx.graphics.GL20;
-import com.badlogic.gdx.graphics.OrthographicCamera;
-import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.PolygonRegion;
+import com.badlogic.gdx.graphics.g2d.PolygonSprite;
 import com.badlogic.gdx.graphics.g2d.PolygonSpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
@@ -16,6 +16,7 @@ import com.badlogic.gdx.utils.FloatArray;
 import space.earlygrey.shapedrawer.*;
 
 
+import java.awt.*;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -23,27 +24,27 @@ import java.util.List;
 public class GdxTest extends ApplicationAdapter {
 	private PolygonSpriteBatch batch;
 	private Texture image;
-	private RepeatablePolygonSprite sprite;
-
-	private ShapeRenderer shapeRenderer;
 
 	private ShapeDrawer drawer;
 
 	private OrthographicCamera cam;
 
 	private TextureRegion region;
+	private Texture onePixel;
 
 	@Override
 	public void create() {
 		batch = new PolygonSpriteBatch();
 		image = new Texture("libgdx.png");
-
-		shapeRenderer = new ShapeRenderer();
-		shapeRenderer.setAutoShapeType(true);
-		drawer = new ShapeDrawer(batch);
+		image.setWrap(Texture.TextureWrap.Repeat, Texture.TextureWrap.Repeat);
+		Pixmap pixmap = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
+		pixmap.setColor(Color.WHITE);
+		pixmap.drawPixel(0, 0);
+		onePixel = new Texture(pixmap);
+		pixmap.dispose();
+		TextureRegion pixel = new TextureRegion(onePixel, 0, 0, 1, 1);
+		drawer = new ShapeDrawer(batch, pixel);
 		region = new TextureRegion(image);
-		region.flip(false, true);
-		createSprite();
 
 		float w = Gdx.graphics.getWidth();
 		float h = Gdx.graphics.getHeight();
@@ -57,13 +58,13 @@ public class GdxTest extends ApplicationAdapter {
 	}
 
 	private FloatArray _path = new FloatArray();
-	private JoinType _type = JoinType.Pointy;
+	private JoinType _type = JoinType.Round;
 
 	private boolean _open = true;
 
 	private boolean _draw = false;
 
-	private boolean _printDebug = false;
+	private boolean _printDebug = true;
 
 	private float[] _calcPath;
 
@@ -74,13 +75,12 @@ public class GdxTest extends ApplicationAdapter {
 		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 		cam.update();
 		batch.setProjectionMatrix(cam.combined);
-		shapeRenderer.setProjectionMatrix(cam.combined);
-/*
-		var _path = FloatArray.with(new float[] {
+
+	/*	var _path = FloatArray.with(new float[] {
+				150,550,
+				550,500,
+				550,200,
 				150,150,
-				150,250,
-				360,250,
-				360,150,
 		});
 */
 		if(_path.size == 0)
@@ -89,42 +89,52 @@ public class GdxTest extends ApplicationAdapter {
 		batch.begin();
 		float wall = 100;
 		_calcPath = path(_path, wall, _type, _open);
-		if(_path.size >= 2) {
-			sprite.setVertices(_calcPath);
-			if(_draw)
-			    sprite.draw(batch);
+
+		//_calcPath = new float[] {0f, 0f, 0f, 600f, 600f, 600f, 600f, 0f};
+		var triag = new EarClippingTriangulator();
+		var indices = triag.computeTriangles(_calcPath).toArray();
+		PolygonRegion polyReg = new PolygonRegion(region, _calcPath, indices);
+		if(_draw) {
+			batch.draw(polyReg, 0, 0);
 		}
-		batch.end();
-		shapeRenderer.begin();
+	//	var ps = new PolygonSprite(polyReg);
+	//	ps.draw(batch);
+
+
 
 		// draw the triangles of sprite
-		if(_printDebug)
-			sprite.drawDebug(shapeRenderer, Color.CORAL);
+		if(_printDebug) {
+			drawer.setColor(Color.CYAN);
+			for (int j = 0; j < indices.length; j += 3) {
+				float x1 = _calcPath[2*indices[j]];
+				float y1 = _calcPath[2*indices[j] + 1];
+				float x2 = _calcPath[2*indices[j + 1]];
+				float y2 = _calcPath[2*indices[j + 1] + 1];
+				float x3 = _calcPath[2*indices[j + 2]];
+				float y3 = _calcPath[2*indices[j + 2] + 1];
+				drawer.triangle(x1, y1, x2, y2, x3, y3);
+			}
+			drawer.setColor(Color.GREEN);
+			for (int j = 0; j < _calcPath.length; j += 2) {
+				float x1 = _calcPath[j];
+				float y1 = _calcPath[j + 1];
 
-		// draw the points of the path
-	/*	shapeRenderer.setColor(Color.RED);
-		for(var i = 1; i<_path.size; i+=2)
-			pointAt(_path.get(i-1), _path.get(i));
-
-		if(_path.size >= 4) {
-			shapeRenderer.polyline(_path.toArray());
+				if(j+2 >= _calcPath.length)
+					break;
+				float x2 = _calcPath[j + 2];
+				float y2 = _calcPath[j + 3];
+				drawer.line(x1, y1, x2, y2);
+			}
 		}
-		// draw outline in green
-		shapeRenderer.setColor(Color.GREEN);
-		if(_path.size >=2)
-		  shapeRenderer.polyline(_calcPath);
-
-	 */
-		shapeRenderer.end();
-
+		batch.end();
 	}
 
 	private final Vector3 mouseInWorld3D = new Vector3();
 
 	private void createSprite() {
-		sprite = new RepeatablePolygonSprite();
-		sprite.setTextureRegion(region);
-		sprite.setDensity(100);
+	//	sprite = new RepeatablePolygonSprite();
+	//	sprite.setTextureRegion(region);
+	//	sprite.setDensity(100);
 	}
 
 	private void handleInput() {
@@ -172,9 +182,6 @@ public class GdxTest extends ApplicationAdapter {
 		cam.update();
 	}
 
-	void pointAt(float x, float y) {
-		shapeRenderer.circle(x, y, 5);
-	}
 
 	enum JoinType {
 		Pointy,
@@ -213,8 +220,6 @@ public class GdxTest extends ApplicationAdapter {
 				outer.add(x+halfWidth);
 				outer.add(y+halfWidth);
 				outer.add(x+halfWidth);
-				outer.add(y-halfWidth);
-				outer.add(x-halfWidth);
 				outer.add(y-halfWidth);
 			}
 
@@ -474,20 +479,30 @@ public class GdxTest extends ApplicationAdapter {
 		if(endAngle < 0) {
 			endAngle += MathUtils.PI2;
 		}
-		var sides = estimateSidesRequired(radius, radius);
+
 		var deltaAngle = (endAngle + MathUtils.PI2 - startAngle) % MathUtils.PI2;
 		if(clockwise) {
 			deltaAngle = MathUtils.PI2 - deltaAngle;
 		}
+		var sides = estimateSidesRequired(radius, radius);
+		sides *= deltaAngle/MathUtils.PI2;
 
 		var dAnglePerSide = deltaAngle / sides;
 		var angle = startAngle;
+		angle += dAnglePerSide;
+		sides -= 1;
 		if(clockwise) {
 			dAnglePerSide *= -1;
+			angle += 2*dAnglePerSide;
+
 		}
 
-		for (var i = 0; i<=sides; i++) {
-			var cos = MathUtils.cos(angle);
+		drawer.setColor(Color.WHITE_FLOAT_BITS);
+		for (var i = 1; i<=sides; i++) {
+		/*	if(i>1) {
+				drawer.setColor(Color.RED);
+			}
+		*/	var cos = MathUtils.cos(angle);
 			var sin = MathUtils.sin(angle);
 			angle += dAnglePerSide;
 			var x = centreX + cos * radius;
@@ -495,12 +510,14 @@ public class GdxTest extends ApplicationAdapter {
 
 			list.add(x);
 			list.add(y);
+		//	drawer.circle(x,y,2);
 		}
 	}
 
 
 	private SideEstimator sideEstimator = new DefaultSideEstimator();
 	protected int estimateSidesRequired(float radiusX, float radiusY) {
+		//return 12;
 		return sideEstimator.estimateSidesRequired(drawer.getPixelSize(), radiusX, radiusY);
 	}
 
@@ -509,6 +526,6 @@ public class GdxTest extends ApplicationAdapter {
 	public void dispose() {
 		batch.dispose();
 		image.dispose();
-		shapeRenderer.dispose();
+		onePixel.dispose();
 	}
 }
