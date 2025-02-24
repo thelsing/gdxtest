@@ -26,6 +26,14 @@ import java.util.List;
  */
 public class GdxTest extends ApplicationAdapter {
     private static class TriangledPolygon {
+        TriangledPolygon(float[] vertices, short[] indices) {
+            this.vertices = vertices;
+            this.indices = indices;
+        }
+        TriangledPolygon(FloatArray vertices, ShortArray indices) {
+            this.vertices = vertices.toArray();
+            this.indices = indices.toArray();
+        }
         float[] vertices;
         short[] indices;
     }
@@ -92,10 +100,10 @@ public class GdxTest extends ApplicationAdapter {
 
         batch.begin();
         float wall = 100;
-        drawPathWithJoin(_path, wall, _type, _open);
+        var poly = drawPathWithJoin(_path, wall, _type, _open);
 
-        var indices = indices2.toArray();
-        var vertices = vertices2.toArray();
+        var indices = poly.indices;
+        var vertices = poly.vertices;
 
         PolygonRegion polyReg = new PolygonRegion(region, vertices, indices);
         if (_draw) {
@@ -252,65 +260,62 @@ public class GdxTest extends ApplicationAdapter {
     Vector2 vert2 = new Vector2();
     Vector2 vert3 = new Vector2();
     Vector2 vert4 = new Vector2();
+    
 
-    TriangledPolygon result = new TriangledPolygon();
-
-    void pushQuad() {
-        var index = vertices2.size / 2;
-        vertices2.add(vert1.x);
-        vertices2.add(vert1.y);
-        vertices2.add(vert2.x);
-        vertices2.add(vert2.y);
-        vertices2.add(vert3.x);
-        vertices2.add(vert3.y);
-        vertices2.add(vert4.x);
-        vertices2.add(vert4.y);
-        indices2.add(index);
-        indices2.add(index + 1);
-        indices2.add(index + 2);
-        indices2.add(index);
-        indices2.add(index + 2);
-        indices2.add(index + 3);
+    void pushQuad(FloatArray vertices, ShortArray indices) {
+        var index = vertices.size / 2;
+        vertices.add(vert1.x);
+        vertices.add(vert1.y);
+        vertices.add(vert2.x);
+        vertices.add(vert2.y);
+        vertices.add(vert3.x);
+        vertices.add(vert3.y);
+        vertices.add(vert4.x);
+        vertices.add(vert4.y);
+        indices.add(index);
+        indices.add(index + 1);
+        indices.add(index + 2);
+        indices.add(index);
+        indices.add(index + 2);
+        indices.add(index + 3);
     }
 
-    void pushTriangle() {
-        var index = vertices2.size / 2;
-        vertices2.add(vert1.x);
-        vertices2.add(vert1.y);
-        vertices2.add(vert2.x);
-        vertices2.add(vert2.y);
-        vertices2.add(vert3.x);
-        vertices2.add(vert3.y);
-        indices2.add(index);
-        indices2.add(index + 1);
-        indices2.add(index + 2);
+    void pushTriangle(FloatArray vertices, ShortArray indices) {
+        var index = vertices.size / 2;
+        vertices.add(vert1.x);
+        vertices.add(vert1.y);
+        vertices.add(vert2.x);
+        vertices.add(vert2.y);
+        vertices.add(vert3.x);
+        vertices.add(vert3.y);
+        indices.add(index);
+        indices.add(index + 1);
+        indices.add(index + 2);
     }
+    
 
-    FloatArray vertices2 = new FloatArray();
-    ShortArray indices2 = new ShortArray();
-
-    private void drawPathWithJoin(FloatArray path, float lineWidth, JoinType joinType, boolean open) {
+    private TriangledPolygon drawPathWithJoin(FloatArray path, float lineWidth, JoinType joinType, boolean open) {
         float halfWidth = lineWidth / 2f;
         boolean pointyJoin = joinType == JoinType.Pointy;
-
-        vertices2.clear();
-        indices2.clear();
+        
+        var vertices = new FloatArray();
+        var indices = new ShortArray();
 
         if (path.size == 2) {
             var x = path.get(0);
             var y = path.get(1);
             if (joinType == JoinType.Round) {
-                vertices2.add(x + halfWidth, y);
-                addArc(vertices2, indices2, x, y, halfWidth, 0, MathUtils.PI2 - 0.1f, false);
-                vertices2.add(x + halfWidth, y);
+                vertices.add(x + halfWidth, y);
+                addArc(vertices, indices, x, y, halfWidth, 0, MathUtils.PI2 - 0.1f, false);
+                vertices.add(x + halfWidth, y);
             } else {
                 vert1.set(x - halfWidth, y - halfWidth);
                 vert2.set(x - halfWidth, y + halfWidth);
                 vert3.set(x + halfWidth, y + halfWidth);
                 vert4.set(x + halfWidth, y - halfWidth);
-                pushQuad();
+                pushQuad(vertices, indices);
             }
-            return;
+            return new TriangledPolygon(vertices, indices);
         }
 
         if (path.size == 4) {
@@ -321,30 +326,30 @@ public class GdxTest extends ApplicationAdapter {
             if (joinType == JoinType.Round) {
                 Joiner.prepareFlatEndpoint(B, A, D, E, halfWidth);
 
-                vertices2.add(D.x);
-                vertices2.add(D.y);
+                vertices.add(D.x);
+                vertices.add(D.y);
                 vec1.set(D).add(-A.x, -A.y);
                 var angle = vec1.angleRad();
-                addArc(vertices2, indices2, A.x, A.y, halfWidth, angle, angle + MathUtils.PI, false);
-                vertices2.add(E.x);
-                vertices2.add(E.y);
+                addArc(vertices, indices, A.x, A.y, halfWidth, angle, angle + MathUtils.PI, false);
+                vertices.add(E.x);
+                vertices.add(E.y);
 
                 vert1.set(D);
                 vert2.set(E);
 
                 Joiner.prepareFlatEndpoint(A, B, D, E, halfWidth);
-                vertices2.add(D.x);
-                vertices2.add(D.y);
+                vertices.add(D.x);
+                vertices.add(D.y);
                 vec1.set(D).add(-B.x, -B.y);
                 angle = vec1.angleRad();
-                addArc(vertices2, indices2, B.x, B.y, halfWidth, angle, angle + MathUtils.PI, false);
+                addArc(vertices, indices, B.x, B.y, halfWidth, angle, angle + MathUtils.PI, false);
 
-                vertices2.add(E.x);
-                vertices2.add(E.y);
+                vertices.add(E.x);
+                vertices.add(E.y);
 
                 vert3.set(D);
                 vert4.set(E);
-                pushQuad();
+                pushQuad(vertices, indices);
 
             } else {
                 Joiner.prepareSquareEndpoint(B, A, D, E, halfWidth);
@@ -355,9 +360,9 @@ public class GdxTest extends ApplicationAdapter {
                 Joiner.prepareSquareEndpoint(A, B, D, E, halfWidth);
                 vert3.set(D);
                 vert4.set(E);
-                pushQuad();
+                pushQuad(vertices, indices);
             }
-            return;
+            return new TriangledPolygon(vertices, indices);
         }
 
         for (int i = 2; i < path.size - 2; i += 2) {
@@ -380,13 +385,13 @@ public class GdxTest extends ApplicationAdapter {
                         vec1.set(B).sub(A).setLength(halfWidth);
                         D.add(vec1);
                         E.add(vec1);
-                        vertices2.add(D.x);
-                        vertices2.add(D.y);
+                        vertices.add(D.x);
+                        vertices.add(D.y);
                         vec1.set(D).add(-A.x, -A.y);
                         var angle = vec1.angleRad();
-                        addArc(vertices2, indices2, A.x, A.y, halfWidth, angle, angle + MathUtils.PI, false);
-                        vertices2.add(E.x);
-                        vertices2.add(E.y);
+                        addArc(vertices, indices, A.x, A.y, halfWidth, angle, angle + MathUtils.PI, false);
+                        vertices.add(E.x);
+                        vertices.add(E.y);
                     }
 
                     vert1.set(E);
@@ -418,8 +423,8 @@ public class GdxTest extends ApplicationAdapter {
                 y4 = E.y;
             }
 
-            pushQuad();
-            if (!pointyJoin) drawSmoothJoinFill(vertices2, indices2, A, B, C, D, E, halfWidth, joinType);
+            pushQuad(vertices, indices);
+            if (!pointyJoin) drawSmoothJoinFill(vertices, indices, A, B, C, D, E, halfWidth, joinType);
             vert1.set(x4, y4);
             vert2.set(x3, y3);
         }
@@ -430,13 +435,13 @@ public class GdxTest extends ApplicationAdapter {
             Joiner.prepareFlatEndpoint(B, C, D, E, halfWidth);
             if (joinType == JoinType.Round) {
 
-                vertices2.add(D.x);
-                vertices2.add(D.y);
+                vertices.add(D.x);
+                vertices.add(D.y);
                 vec1.set(D).add(-C.x, -C.y);
                 var angle = vec1.angleRad();
-                addArc(vertices2, indices2, C.x, C.y, halfWidth, angle, angle + MathUtils.PI, false);
-                vertices2.add(E.x);
-                vertices2.add(E.y);
+                addArc(vertices, indices, C.x, C.y, halfWidth, angle, angle + MathUtils.PI, false);
+                vertices.add(E.x);
+                vertices.add(E.y);
             } else {
                 vec1.set(C).sub(B).setLength(halfWidth);
                 D.add(vec1);
@@ -445,7 +450,7 @@ public class GdxTest extends ApplicationAdapter {
 
             vert3.set(E);
             vert4.set(D);
-            pushQuad();
+            pushQuad(vertices, indices);
         } else {
             if (pointyJoin) {
                 //draw last link on path
@@ -453,14 +458,14 @@ public class GdxTest extends ApplicationAdapter {
                 Joiner.preparePointyJoin(B, C, A, D, E, halfWidth);
                 vert3.set(D);
                 vert4.set(E);
-                pushQuad();
+                pushQuad(vertices, indices);
 
                 //draw connection back to first vertex
                 vert1.set(D);
                 vert2.set(E);
                 vert3.set(E0);
                 vert4.set(D0);
-                pushQuad();
+                pushQuad(vertices, indices);
             } else {
                 //draw last link on path
                 A.set(B);
@@ -469,8 +474,8 @@ public class GdxTest extends ApplicationAdapter {
                 Joiner.prepareSmoothJoin(A, B, C, D, E, halfWidth, false);
                 vert3.set(D);
                 vert4.set(E);
-                pushQuad();
-                drawSmoothJoinFill(vertices2, indices2,A, B, C, D, E, halfWidth, joinType);
+                pushQuad(vertices, indices);
+                drawSmoothJoinFill(vertices, indices,A, B, C, D, E, halfWidth, joinType);
 
                 //draw connection back to first vertex
                 Joiner.prepareSmoothJoin(A, B, C, D, E, halfWidth, true);
@@ -480,10 +485,11 @@ public class GdxTest extends ApplicationAdapter {
                 Joiner.prepareSmoothJoin(B, C, A, D, E, halfWidth, false);
                 vert1.set(D);
                 vert2.set(E);
-                pushQuad();
-                drawSmoothJoinFill(vertices2, indices2,B, C, A, D, E, halfWidth, joinType);
+                pushQuad(vertices, indices);
+                drawSmoothJoinFill(vertices, indices,B, C, A, D, E, halfWidth, joinType);
             }
         }
+        return new TriangledPolygon(vertices, indices);
     }
 
     void drawSmoothJoinFill(FloatArray vertices, ShortArray indices, Vector2 A, Vector2 B, Vector2 C, Vector2 D, Vector2 E, float halfLineWidth, JoinType joinType) {
@@ -498,7 +504,7 @@ public class GdxTest extends ApplicationAdapter {
 
         bendsLeft = Joiner.prepareSmoothJoin(A, B, C, D, E, halfLineWidth, true);
         vert3.set(bendsLeft ? E : D);
-        pushTriangle();
+        pushTriangle(vertices, indices);
 
         if (joinType == JoinType.Round) {
             if(bendsLeft) {
